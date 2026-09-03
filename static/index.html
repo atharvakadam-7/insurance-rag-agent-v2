@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Insurance Policy Agent</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #262a33;
+    --text: #e8e9ec;
+    --muted: #8b8f9a;
+    --accent: #5b8cff;
+    --user-bubble: #2a3244;
+    --bot-bubble: #1b1e26;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  header p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 760px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  .msg {
+    max-width: 80%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    line-height: 1.5;
+    font-size: 14.5px;
+  }
+  .msg.user {
+    align-self: flex-end;
+    background: var(--user-bubble);
+    border-bottom-right-radius: 3px;
+    white-space: pre-wrap;
+  }
+  .msg.bot p { margin: 0 0 8px; }
+  .msg.bot p:last-child { margin-bottom: 0; }
+  .msg.bot ul, .msg.bot ol { margin: 4px 0; padding-left: 20px; }
+  .msg.bot table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 8px 0;
+    font-size: 13.5px;
+  }
+  .msg.bot th, .msg.bot td {
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    text-align: left;
+  }
+  .msg.bot th { background: #20242e; }
+  .msg.bot code {
+    background: #20242e;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .msg.bot pre {
+    background: #20242e;
+    padding: 10px;
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+  .msg.bot {
+    align-self: flex-start;
+    background: var(--bot-bubble);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 3px;
+  }
+  .msg.bot.loading {
+    color: var(--muted);
+    font-style: italic;
+  }
+  .msg.bot.error {
+    border-color: #5c2b2b;
+    color: #ff9b9b;
+  }
+  form {
+    border-top: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    gap: 10px;
+    max-width: 760px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  input {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 14.5px;
+    outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+  button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 0 20px;
+    border-radius: 8px;
+    font-size: 14.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 24px 16px;
+    max-width: 760px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  .example {
+    font-size: 12.5px;
+    color: var(--muted);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+  }
+  .example:hover { color: var(--text); border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Insurance Policy Agent</h1>
+  <p>Ask about Star Comprehensive or HDFC Optima Secure coverage — answers are grounded in the actual policy documents. First request after inactivity may take up to a minute (free-tier cold start).</p>
+</header>
+
+<div class="examples" id="examples">
+  <div class="example">Co-payment for age 61 and above?</div>
+  <div class="example">Waiting period for pre-existing diseases?</div>
+  <div class="example">Reimbursement on a ₹50,000 claim at age 65?</div>
+</div>
+
+<div id="chat"></div>
+
+<form id="form">
+  <input id="input" type="text" placeholder="Ask a question about your policy..." autocomplete="off" />
+  <button type="submit" id="send">Ask</button>
+</form>
+
+<script>
+const chat = document.getElementById('chat');
+const form = document.getElementById('form');
+const input = document.getElementById('input');
+const send = document.getElementById('send');
+const examples = document.getElementById('examples');
+
+function addMessage(text, sender, extraClass = '') {
+  const div = document.createElement('div');
+  div.className = `msg ${sender} ${extraClass}`.trim();
+  if (sender === 'bot' && !extraClass) {
+    div.innerHTML = marked.parse(text);
+  } else {
+    div.textContent = text;
+  }
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+async function ask(question) {
+  addMessage(question, 'user');
+  const loadingMsg = addMessage('Thinking — this can take up to a minute if the server was idle...', 'bot', 'loading');
+  input.value = '';
+  send.disabled = true;
+
+  try {
+    const res = await fetch('/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question })
+    });
+    const data = await res.json();
+    loadingMsg.remove();
+
+    if (!res.ok) {
+      addMessage(data.detail || 'Something went wrong.', 'bot', 'error');
+    } else {
+      addMessage(data.answer, 'bot');
+    }
+  } catch (err) {
+    loadingMsg.remove();
+    addMessage('Could not reach the server. Try again in a moment.', 'bot', 'error');
+  } finally {
+    send.disabled = false;
+    input.focus();
+  }
+}
+
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const q = input.value.trim();
+  if (q) ask(q);
+});
+
+examples.addEventListener('click', (e) => {
+  if (e.target.classList.contains('example')) {
+    ask(e.target.textContent);
+  }
+});
+</script>
+
+</body>
+</html>

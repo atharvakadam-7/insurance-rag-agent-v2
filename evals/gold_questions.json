@@ -1,0 +1,50 @@
+[
+  {
+    "id": "waiting-ped",
+    "question": "What is the waiting period for pre-existing diseases?",
+    "expected_keywords": ["waiting", "pre-existing", "month"],
+    "policy": null
+  },
+  {
+    "id": "copay-senior",
+    "question": "Is there a co-payment for insured persons aged 61 and above?",
+    "expected_keywords": ["co-pay", "copay", "age", "61"],
+    "policy": null
+  },
+  {
+    "id": "room-rent",
+    "question": "What is the room rent limit or hospital accommodation cap?",
+    "expected_keywords": ["room", "rent", "icu", "limit"],
+    "policy": null
+  },
+  {
+    "id": "exclusions",
+    "question": "Which treatments or conditions are excluded from coverage?",
+    "expected_keywords": ["exclu", "not covered", "shall not"],
+    "policy": null
+  },
+  {
+    "id": "day-care",
+    "question": "Are day care procedures covered under this policy?",
+    "expected_keywords": ["day care", "daycare", "procedure"],
+    "policy": null
+  },
+  {
+    "id": "maternity",
+    "question": "Does the policy cover maternity expenses and what waiting period applies?",
+    "expected_keywords": ["maternity", "waiting", "delivery"],
+    "policy": null
+  },
+  {
+    "id": "sum-insured",
+    "question": "What sum insured options are available?",
+    "expected_keywords": ["sum insured", "si", "lakh"],
+    "policy": null
+  },
+  {
+    "id": "claim-process",
+    "question": "How do I file a reimbursement claim and what documents are required?",
+    "expected_keywords": ["claim", "document", "reimburs"],
+    "policy": null
+  }
+]

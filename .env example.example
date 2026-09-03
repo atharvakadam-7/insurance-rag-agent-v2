@@ -1,0 +1,5 @@
+GROQ_API_KEY=your_groq_api_key_here
+GROQ_MODEL=llama-3.3-70b-versatile
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+CHROMA_PERSIST_DIR=chroma_db
+TOP_K=4

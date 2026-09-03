@@ -1,0 +1,1 @@
+{"embedding_model": "sentence-transformers/all-MiniLM-L6-v2", "files": {"data\\hdfc_optima_secure.pdf": {"hash": "79662228bf4a304621c15fd76425f1fd8ac4ff915b688c9033f2ff3c210216e5", "chunks": 490}, "data\\star_comprehensive.pdf": {"hash": "cca93014d1edc07a3e17d73cf70f900cb1ca85db3398bd637fa81d916ad3d564", "chunks": 65}}}
