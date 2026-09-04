@@ -7,6 +7,7 @@ from pydantic import BaseModel
 import json
 import logging
 from datetime import datetime
+import os
 
 from .agent import build_agent
 from .pdf_extract import clean_text
