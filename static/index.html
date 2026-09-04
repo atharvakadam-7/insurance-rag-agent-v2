@@ -136,6 +136,29 @@
     padding-left: 20px;
   }
 
+  .entry.answer .bubble table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 12px 0;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .entry.answer .bubble th,
+  .entry.answer .bubble td {
+    border: 1px solid var(--rule);
+    padding: 7px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .entry.answer .bubble th {
+    background: var(--ledger-light);
+    color: var(--ledger);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
   .entry.system .bubble {
     background: var(--rust-light);
     border-left: 3px solid var(--rust);
@@ -312,15 +335,45 @@ function addEntry(kind, text) {
   return entry;
 }
 
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 function formatAnswer(text) {
-  let html = text
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const lines = text.split('\n');
+  const out = [];
+  let tableRows = [];
+
+  const flushTable = () => {
+    if (!tableRows.length) return;
+    out.push('<table>' + tableRows.join('') + '</table>');
+    tableRows = [];
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      if (/^\|[\s\-:|]+\|$/.test(trimmed)) continue;
+      const isFirstRow = tableRows.length === 0;
+      const tag = isFirstRow ? 'th' : 'td';
+      const cells = trimmed.split('|').slice(1, -1)
+        .map(c => `<${tag}>${esc(c.trim())}</${tag}>`).join('');
+      tableRows.push(`<tr>${cells}</tr>`);
+    } else {
+      flushTable();
+      out.push(line);
+    }
+  }
+  flushTable();
+
+  let html = out.join('\n')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\n\n/g, '</p><p>')
     .replace(/\n- (.+)/g, '<li>$1</li>');
-  html = '<p>' + html + '</p>';
-  html = html.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
-  return html;
+
+  html = html.replace(/(<li>.*?<\/li>\s*)+/gs, m => '<ul>' + m + '</ul>');
+
+  return '<p>' + html + '</p>';
 }
 
 form.addEventListener('submit', async (e) => {
