@@ -58,6 +58,25 @@ def root():
 def health():
     return {"status": "ok"}
 
+@app.get("/audit")
+def audit(n: int = 20):
+    """Return the last n query events from audit.log as JSON."""
+    log_path = "audit.log"
+    if not os.path.exists(log_path):
+        return {"entries": []}
+    
+    with open(log_path, "r") as f:
+        lines = [l.strip() for l in f.readlines() if l.strip()]
+    
+    entries = []
+    for line in lines:
+        try:
+            entries.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    
+    return {"count": len(entries), "entries": entries[-n:]}
+
 
 @app.post("/query", response_model=QueryResponse)
 def query(req: QueryRequest):
