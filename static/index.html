@@ -3,205 +3,340 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Insurance Policy Agent</title>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<title>Policy Desk — Insurance Q&A</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f1115;
-    --panel: #171a21;
-    --border: #262a33;
-    --text: #e8e9ec;
-    --muted: #8b8f9a;
-    --accent: #5b8cff;
-    --user-bubble: #2a3244;
-    --bot-bubble: #1b1e26;
+    --paper: #F3EEE2;
+    --paper-dark: #E8E1D0;
+    --ink: #1C2B39;
+    --ink-soft: #3D4E5C;
+    --ledger: #2F4A3D;
+    --ledger-light: #E4EAE4;
+    --rust: #B0492E;
+    --rust-light: #F3E1DA;
+    --rule: #C7BFA9;
+    --rule-strong: #A79C7F;
   }
+
   * { box-sizing: border-box; }
+
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
   }
-  header {
-    padding: 20px 24px;
-    border-bottom: 1px solid var(--border);
-  }
-  header h1 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-  }
-  header p {
-    margin: 4px 0 0;
-    font-size: 13px;
-    color: var(--muted);
-  }
-  #chat {
-    flex: 1;
-    overflow-y: auto;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+
+  .frame {
     max-width: 760px;
-    width: 100%;
     margin: 0 auto;
+    padding: 0 24px 80px;
   }
-  .msg {
-    max-width: 80%;
-    padding: 12px 16px;
-    border-radius: 12px;
-    line-height: 1.5;
-    font-size: 14.5px;
+
+  header {
+    padding: 48px 0 28px;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 32px;
   }
-  .msg.user {
-    align-self: flex-end;
-    background: var(--user-bubble);
-    border-bottom-right-radius: 3px;
-    white-space: pre-wrap;
+
+  .masthead {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
   }
-  .msg.bot p { margin: 0 0 8px; }
-  .msg.bot p:last-child { margin-bottom: 0; }
-  .msg.bot ul, .msg.bot ol { margin: 4px 0; padding-left: 20px; }
-  .msg.bot table {
-    border-collapse: collapse;
-    width: 100%;
-    margin: 8px 0;
-    font-size: 13.5px;
+
+  h1 {
+    font-family: 'Source Serif 4', serif;
+    font-weight: 600;
+    font-size: 32px;
+    margin: 0;
+    letter-spacing: -0.01em;
   }
-  .msg.bot th, .msg.bot td {
-    border: 1px solid var(--border);
-    padding: 6px 10px;
-    text-align: left;
+
+  .ref {
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-align: right;
   }
-  .msg.bot th { background: #20242e; }
-  .msg.bot code {
-    background: #20242e;
-    padding: 2px 5px;
-    border-radius: 4px;
-    font-size: 13px;
-  }
-  .msg.bot pre {
-    background: #20242e;
-    padding: 10px;
-    border-radius: 8px;
-    overflow-x: auto;
-  }
-  .msg.bot {
-    align-self: flex-start;
-    background: var(--bot-bubble);
-    border: 1px solid var(--border);
-    border-bottom-left-radius: 3px;
-  }
-  .msg.bot.loading {
-    color: var(--muted);
+
+  .subhead {
+    font-family: 'Source Serif 4', serif;
     font-style: italic;
+    font-size: 16px;
+    color: var(--ink-soft);
+    margin: 12px 0 0;
   }
-  .msg.bot.error {
-    border-color: #5c2b2b;
-    color: #ff9b9b;
-  }
-  form {
-    border-top: 1px solid var(--border);
-    padding: 16px 24px;
+
+  .policies {
     display: flex;
     gap: 10px;
-    max-width: 760px;
-    width: 100%;
-    margin: 0 auto;
+    margin-top: 20px;
+    flex-wrap: wrap;
   }
-  input {
-    flex: 1;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 12px 14px;
-    border-radius: 8px;
+
+  .policy-tag {
+    font-size: 11px;
+    padding: 5px 10px;
+    border: 1px solid var(--rule-strong);
+    color: var(--ink-soft);
+    background: var(--paper-dark);
+  }
+
+  .thread {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+
+  .entry {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .entry.question {
+    align-items: flex-end;
+  }
+
+  .bubble {
+    max-width: 88%;
+    padding: 14px 18px;
+    line-height: 1.6;
     font-size: 14.5px;
+  }
+
+  .entry.question .bubble {
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 3px 3px 0 3px;
+  }
+
+  .entry.answer .bubble {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--ledger);
+    border-radius: 0 3px 3px 3px;
+    font-family: 'Source Serif 4', serif;
+    font-size: 15.5px;
+  }
+
+  .entry.answer .bubble strong {
+    color: var(--ledger);
+    font-weight: 600;
+  }
+
+  .entry.answer .bubble ul, .entry.answer .bubble ol {
+    margin: 8px 0;
+    padding-left: 20px;
+  }
+
+  .entry.system .bubble {
+    background: var(--rust-light);
+    border-left: 3px solid var(--rust);
+    color: #6b2c1a;
+    font-size: 13px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .stamp {
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    color: var(--ink-soft);
+    padding-left: 4px;
+  }
+
+  .stamp.answer-stamp { color: var(--ledger); }
+  .stamp.question-stamp { text-align: right; }
+
+  form {
+    display: flex;
+    gap: 0;
+    border: 2px solid var(--ink);
+    background: #fff;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 14px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    color: var(--ink);
     outline: none;
   }
-  input:focus { border-color: var(--accent); }
+
+  input[type="text"]::placeholder { color: var(--rule-strong); }
+
   button {
-    background: var(--accent);
-    color: white;
     border: none;
-    padding: 0 20px;
-    border-radius: 8px;
-    font-size: 14.5px;
-    font-weight: 600;
+    border-left: 2px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 14px 22px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.04em;
     cursor: pointer;
+    transition: background 0.15s ease;
   }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  button:hover:not(:disabled) { background: var(--ledger); }
+  button:disabled { opacity: 0.5; cursor: default; }
+
   .examples {
+    margin-top: 14px;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    padding: 0 24px 16px;
-    max-width: 760px;
-    width: 100%;
-    margin: 0 auto;
   }
+
   .example {
-    font-size: 12.5px;
-    color: var(--muted);
-    background: var(--panel);
-    border: 1px solid var(--border);
+    font-size: 12px;
     padding: 6px 12px;
-    border-radius: 20px;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--ink-soft);
     cursor: pointer;
   }
-  .example:hover { color: var(--text); border-color: var(--accent); }
+
+  .example:hover { border-color: var(--ink); color: var(--ink); }
+
+  .waiting {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    padding: 4px 0;
+  }
+
+  .waiting .dot {
+    width: 6px;
+    height: 6px;
+    background: var(--rust);
+    border-radius: 50%;
+    animation: pulse 1.1s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+  }
+
+  footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+    font-size: 11px;
+    color: var(--rule-strong);
+    display: flex;
+    justify-content: space-between;
+  }
 </style>
 </head>
 <body>
+<div class="frame">
+  <header>
+    <div class="masthead">
+      <h1>Policy Desk</h1>
+      <div class="ref">FILE NO. 2026-RAG-02</div>
+    </div>
+    <p class="subhead">Ask a question about a policy. Every answer cites its source.</p>
+    <div class="policies">
+      <span class="policy-tag">Star Comprehensive</span>
+      <span class="policy-tag">HDFC Optima Secure</span>
+    </div>
+  </header>
 
-<header>
-  <h1>Insurance Policy Agent</h1>
-  <p>Ask about Star Comprehensive or HDFC Optima Secure coverage — answers are grounded in the actual policy documents. First request after inactivity may take up to a minute (free-tier cold start).</p>
-</header>
+  <div class="thread" id="thread"></div>
 
-<div class="examples" id="examples">
-  <div class="example">Co-payment for age 61 and above?</div>
-  <div class="example">Waiting period for pre-existing diseases?</div>
-  <div class="example">Reimbursement on a ₹50,000 claim at age 65?</div>
+  <form id="form">
+    <input type="text" id="question" placeholder="e.g. what is the waiting period for pre-existing diseases" autocomplete="off">
+    <button type="submit" id="submitBtn">Ask</button>
+  </form>
+
+  <div class="examples">
+    <button type="button" class="example" data-q="What is the co-payment for insured persons aged 61 and above?">Co-payment at 61+</button>
+    <button type="button" class="example" data-q="Reimbursement on a 50000 claim at age 65 under Star Comprehensive?">Claim math example</button>
+    <button type="button" class="example" data-q="What is the room rent limit under HDFC Optima Secure?">Room rent limits</button>
+  </div>
+
+  <footer>
+    <span>Retrieval-backed agent — hybrid search + reranking</span>
+    <span>Not a substitute for your policy document</span>
+  </footer>
 </div>
 
-<div id="chat"></div>
-
-<form id="form">
-  <input id="input" type="text" placeholder="Ask a question about your policy..." autocomplete="off" />
-  <button type="submit" id="send">Ask</button>
-</form>
-
 <script>
-const chat = document.getElementById('chat');
+const thread = document.getElementById('thread');
 const form = document.getElementById('form');
-const input = document.getElementById('input');
-const send = document.getElementById('send');
-const examples = document.getElementById('examples');
+const input = document.getElementById('question');
+const submitBtn = document.getElementById('submitBtn');
 
-function addMessage(text, sender, extraClass = '') {
-  const div = document.createElement('div');
-  div.className = `msg ${sender} ${extraClass}`.trim();
-  if (sender === 'bot' && !extraClass) {
-    div.innerHTML = marked.parse(text);
+document.querySelectorAll('.example').forEach(btn => {
+  btn.addEventListener('click', () => {
+    input.value = btn.dataset.q;
+    form.dispatchEvent(new Event('submit'));
+  });
+});
+
+function addEntry(kind, text) {
+  const entry = document.createElement('div');
+  entry.className = 'entry ' + kind;
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  if (kind === 'answer') {
+    bubble.innerHTML = formatAnswer(text);
   } else {
-    div.textContent = text;
+    bubble.textContent = text;
   }
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-  return div;
+  const stamp = document.createElement('div');
+  stamp.className = 'stamp' + (kind === 'answer' ? ' answer-stamp' : kind === 'question' ? ' question-stamp' : '');
+  stamp.textContent = kind === 'question' ? 'YOU' : kind === 'answer' ? 'POLICY DESK' : 'SYSTEM';
+  if (kind === 'question') {
+    entry.appendChild(bubble);
+    entry.appendChild(stamp);
+  } else {
+    entry.appendChild(stamp);
+    entry.appendChild(bubble);
+  }
+  thread.appendChild(entry);
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  return entry;
 }
 
-async function ask(question) {
-  addMessage(question, 'user');
-  const loadingMsg = addMessage('Thinking — this can take up to a minute if the server was idle...', 'bot', 'loading');
+function formatAnswer(text) {
+  let html = text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n- (.+)/g, '<li>$1</li>');
+  html = '<p>' + html + '</p>';
+  html = html.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+  return html;
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const question = input.value.trim();
+  if (!question) return;
+
+  addEntry('question', question);
   input.value = '';
-  send.disabled = true;
+  submitBtn.disabled = true;
+
+  const waiting = document.createElement('div');
+  waiting.className = 'waiting';
+  waiting.innerHTML = '<span class="dot"></span> checking the policy documents';
+  thread.appendChild(waiting);
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 
   try {
     const res = await fetch('/query', {
@@ -210,34 +345,19 @@ async function ask(question) {
       body: JSON.stringify({ question })
     });
     const data = await res.json();
-    loadingMsg.remove();
-
+    waiting.remove();
     if (!res.ok) {
-      addMessage(data.detail || 'Something went wrong.', 'bot', 'error');
+      addEntry('system', data.detail || 'Something went wrong reaching the agent.');
     } else {
-      addMessage(data.answer, 'bot');
+      addEntry('answer', data.answer);
     }
   } catch (err) {
-    loadingMsg.remove();
-    addMessage('Could not reach the server. Try again in a moment.', 'bot', 'error');
+    waiting.remove();
+    addEntry('system', 'Could not reach the server. Check that the API is running.');
   } finally {
-    send.disabled = false;
-    input.focus();
-  }
-}
-
-form.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const q = input.value.trim();
-  if (q) ask(q);
-});
-
-examples.addEventListener('click', (e) => {
-  if (e.target.classList.contains('example')) {
-    ask(e.target.textContent);
+    submitBtn.disabled = false;
   }
 });
 </script>
-
 </body>
 </html>

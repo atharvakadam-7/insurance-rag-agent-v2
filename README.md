@@ -1,100 +1,62 @@
-# Insurance policy agent
+# Insurance Policy RAG Agent
 
-Agentic RAG system: FastAPI + LangGraph + Groq (Llama 3.3) + Chroma.
-The agent retrieves from insurance policy PDFs and can run reimbursement
-calculations, instead of just answering from retrieved text.
+An agent that answers questions about insurance policy PDFs and calculates claim reimbursements. Live at https://insurance-rag-agent-v2-production.up.railway.app
 
-## Architecture
+Ask it what a co-payment clause says, or what you'd get back on a claim, and it retrieves the relevant clause, cites the page it came from, and runs the math in code rather than guessing the arithmetic.
 
-```
-User -> FastAPI /query -> LangGraph agent (ReAct loop)
-                              |-- search_policy_docs (Chroma retriever)
-                              |-- calculate_claim_reimbursement
-                              |-- compare_policy_clauses
-                              -> Groq LLM (Llama 3.3)
-```
+## How it works
 
-## 1. Local setup
+**Ingestion.** PDFs are converted to markdown with `pymupdf4llm`, which keeps section structure intact. Pages that come back mostly blank (scanned pages) go through OCR as a fallback. Text gets cleaned of encoding artifacts before it's chunked. Chunking splits each document into small child chunks for search and larger parent chunks for context — a search hits a 500-character fragment, but the agent reads the full paragraph around it.
+
+**Retrieval.** A query runs through two searches at once: a dense vector search (Chroma) and a keyword search (BM25). Insurance text has terms like "sub-limit" or "co-payment" that keyword search catches more reliably than embeddings alone, so the two results are merged with reciprocal rank fusion, then reranked with a cross-encoder (`flashrank`). If the question names a policy, results are filtered to that policy before ranking, so a question about HDFC doesn't pull in a Star Health clause.
+
+**Calculation.** The agent doesn't do arithmetic. It retrieves the coverage percentage, co-pay, deductible, sub-limit, and room-rent cap from the policy text, then hands those numbers to a plain Python function that applies them in the right order: waiting-period check, room-rent proportionate deduction, deductible, sub-limit, coverage percentage, co-pay.
+
+**Auditing.** Every query logs the exact tool calls made, the arguments passed to the calculator, and the answer returned, as JSON in `audit.log`. If a number looks wrong later, you can trace exactly what the model extracted and what it fed into the math.
+
+## Stack
+
+FastAPI, LangGraph, Groq (`qwen/qwen3.6-27b`, falls back to `openai/gpt-oss-20b`), Chroma, `rank_bm25`, `flashrank`, `fastembed` for embeddings, `pymupdf4llm` and `rapidocr` for extraction. Deployed on Railway with the index built into the Docker image at build time.
+
+## Running it locally
 
 ```bash
+git clone https://github.com/atharvakadam-7/insurance-rag-agent-v2
+cd insurance-rag-agent-v2
 python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env            # then paste your real Groq API key in .env
 ```
 
-Get a free Groq API key at https://console.groq.com — takes two minutes,
-no card required as of this writing. Check their model list too; model
-names in `.env.example` get deprecated without much notice.
+Add a `.env` file:
+```
+GROQ_API_KEY=your_key
+GROQ_MODEL=qwen/qwen3.6-27b
+GROQ_FALLBACK_MODEL=openai/gpt-oss-20b
+```
 
-## 2. Add your policy documents
-
-Drop PDF files into `data/`. Public policy wordings from IRDAI-regulated
-insurers (LIC, HDFC Ergo, ICICI Lombard, Star Health, etc.) are the
-intended source — they're public documents, no licensing issue.
-
-## 3. Build the index
-
+Build the index and start the server:
 ```bash
 python ingest.py
-```
-
-Re-run this any time you add or change PDFs. It wipes and rebuilds the
-whole index rather than appending — appending to a stale index is how you
-get duplicate or contradictory chunks.
-
-## 4. Run locally
-
-```bash
 uvicorn app.main:app --reload
 ```
 
-Test it:
-```bash
-curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{"question": "Does this policy cover COVID hospitalization?"}'
-```
+Add your own PDFs to `data/` and re-run `ingest.py`. Files that haven't changed are skipped, so you're not re-embedding the whole set every time.
 
-## 5. Run with Docker
+## Evaluation
+
+`evals/run_eval.py` checks whether retrieval surfaces the right source document for a set of gold questions covering waiting periods, co-payment, room-rent limits, exclusions, day-care coverage, maternity, sum-insured tiers, and the claims process.
 
 ```bash
-docker build -t insurance-rag-agent .
-docker run -p 8000:8000 --env-file .env insurance-rag-agent
+python evals/run_eval.py
 ```
 
-The image bakes in the embedding model AND the vectorstore built from
-whatever is in `data/` at build time. If you change the PDFs, rebuild the
-image — there's no way to update a running container's index in place on
-this setup, and Render's free tier wipes disk on every deploy anyway.
+Currently passes 8 of 8.
 
-## 6. Deploy to Render
+## What it gets right and what it doesn't
 
-1. Push this repo to GitHub.
-2. New Web Service on Render -> connect the repo -> Docker runtime
-   (Render auto-detects the Dockerfile).
-3. Add `GROQ_API_KEY` as an environment variable in Render's dashboard —
-   never commit it, `.env` is already gitignored.
-4. Deploy. Cold starts on the free tier are slow (spins down after
-   inactivity) — mention this if you demo it live, don't let a recruiter
-   think it's broken while it wakes up.
+Retrieval and calculation are split apart on purpose, so the model can't miscalculate a reimbursement, but it can still misread a clause and hand the calculator a wrong number with total confidence. The audit log exists so a wrong answer can be traced back to what the model actually extracted, not just what it printed.
 
-## Known limitations
+The ingestion pipeline skips unchanged files but has no document versioning. If a policy PDF is updated mid-year, you'd re-run ingestion and get a fresh index, with no record of exactly what changed. Fine at a handful of PDFs, not built for hundreds.
 
-- No conversation memory — every `/query` call is stateless. Multi-turn
-  follow-ups ("what about my second claim?") won't have context. Fixing
-  this means adding a session/thread ID and LangGraph's checkpointer.
-- No reranking or hybrid search yet — pure vector similarity. That's the
-  Phase 5 upgrade from the roadmap, not done here.
-- No eval suite yet — you don't actually know the retrieval quality is
-  good, you're assuming it. Ragas comes in Phase 4.
-- `create_react_agent`'s exact keyword arguments can shift between
-  LangGraph versions. If `agent.py` throws a TypeError on `prompt=`, check
-  the installed version's signature — don't assume this code is
-  permanently correct.
-- `ingest.py` uses `PyPDFLoader` from `langchain-community`, which
-  Anthropic's own research confirms is being sunset by the LangChain team
-  (see langchain-ai/langchain-community#674) — it still works today, but
-  it's not where new development is going. Fine for getting this running
-  now; don't leave it there if you're still using this repo in a few
-  months. Standalone replacements like `langchain-pymupdf4llm` exist.
+Groq's free tier has tight rate limits for a multi-step agent, since search, calculation, and the final answer can be three separate calls. The client retries automatically, so queries still complete, just slower under load than on a paid tier.

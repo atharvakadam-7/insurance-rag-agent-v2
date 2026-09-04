@@ -1,4 +1,5 @@
 from langchain_core.tools import tool
+from pydantic import ValidationError
 
 from .claim import calculate_claim
 from .retriever import format_docs, hybrid_retrieve
@@ -12,10 +13,13 @@ def search_policy_docs(query: str, policy_filter: str = "") -> str:
     before answering a coverage question — never answer from memory.
     policy_filter: optional insurer or policy name to restrict results to
     (e.g. "Star Health"), leave empty to search all policies."""
-    docs = hybrid_retrieve(query, policy_filter=policy_filter or None)
-    if not docs:
-        return "No relevant policy sections found for that query."
-    return format_docs(docs)
+    try:
+        docs = hybrid_retrieve(query, policy_filter=policy_filter or None)
+        if not docs:
+            return "No relevant policy sections found for that query."
+        return format_docs(docs)
+    except Exception as e:
+        return f"Error retrieving documents: {str(e)}"
 
 
 @tool
@@ -45,19 +49,36 @@ def calculate_claim_reimbursement(
     waiting_period_active: True if a waiting period still blocks this claim
       entirely (check the docs for the condition's specific waiting period).
     """
-    if isinstance(waiting_period_active, str):
-        waiting_period_active = waiting_period_active.strip().lower() not in ("false", "0", "no", "")
-    result = calculate_claim(
-        claim_amount=claim_amount,
-        coverage_percent=coverage_percent,
-        deductible=deductible,
-        copay_percent=copay_percent,
-        sublimit=sublimit or None,
-        room_rent_cap=room_rent_cap or None,
-        room_rent_claimed=room_rent_claimed or None,
-        waiting_period_active=waiting_period_active,
-    )
-    return result.as_text()
+    try:
+        # Coerce string bools to actual bools (some LLMs pass "False" as string)
+        if isinstance(waiting_period_active, str):
+            waiting_period_active = waiting_period_active.strip().lower() not in ("false", "0", "no", "")
+
+        # Validate numeric types — if the agent passed bad types, fail gracefully
+        try:
+            claim_amount = float(claim_amount)
+            coverage_percent = float(coverage_percent)
+            deductible = float(deductible)
+            copay_percent = float(copay_percent)
+            sublimit = float(sublimit) if sublimit else None
+            room_rent_cap = float(room_rent_cap) if room_rent_cap else None
+            room_rent_claimed = float(room_rent_claimed) if room_rent_claimed else None
+        except (ValueError, TypeError) as e:
+            return f"Error: invalid numeric argument. {str(e)} Ensure all amounts are numbers."
+
+        result = calculate_claim(
+            claim_amount=claim_amount,
+            coverage_percent=coverage_percent,
+            deductible=deductible,
+            copay_percent=copay_percent,
+            sublimit=sublimit,
+            room_rent_cap=room_rent_cap,
+            room_rent_claimed=room_rent_claimed,
+            waiting_period_active=waiting_period_active,
+        )
+        return result.as_text()
+    except Exception as e:
+        return f"Error calculating claim: {str(e)}"
 
 
 @tool
@@ -66,10 +87,13 @@ def compare_policy_clauses(clause_a: str, clause_b: str) -> str:
     search_policy_docs) on coverage, exclusions, and conditions. Pass the
     actual clause text, not a policy name — this tool doesn't retrieve
     anything itself."""
-    return (
-        "Compare these two policy clauses on coverage, exclusions, "
-        f"and conditions:\n\nClause A:\n{clause_a}\n\nClause B:\n{clause_b}"
-    )
+    try:
+        return (
+            "Compare these two policy clauses on coverage, exclusions, "
+            f"and conditions:\n\nClause A:\n{clause_a}\n\nClause B:\n{clause_b}"
+        )
+    except Exception as e:
+        return f"Error comparing clauses: {str(e)}"
 
 
 TOOLS = [search_policy_docs, calculate_claim_reimbursement, compare_policy_clauses]
