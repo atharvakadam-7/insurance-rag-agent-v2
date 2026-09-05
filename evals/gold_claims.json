@@ -1,0 +1,26 @@
+[
+  {
+    "id": "star-age65-full-copay",
+    "question": "Reimbursement on a 50000 claim at age 65 under Star Comprehensive?",
+    "expected_reimbursement": 45000,
+    "note": "10% co-payment applies (age 61+), no deductible/sublimit/cap found"
+  },
+  {
+    "id": "star-age60-no-copay",
+    "question": "Reimbursement on a 50000 claim at age 60 under Star Comprehensive?",
+    "expected_reimbursement": 50000,
+    "note": "co-payment only applies at entry age 61+, so age 60 gets full amount"
+  },
+  {
+    "id": "star-age20-no-copay",
+    "question": "Reimbursement on a 50000 claim at age 20 under Star Comprehensive?",
+    "expected_reimbursement": 50000,
+    "note": "no restricting clause applies, full reimbursement per rule 4c"
+  },
+  {
+    "id": "hdfc-1lakh-standard",
+    "question": "Reimbursement on a 1 lakh claim under HDFC Optima Secure?",
+    "expected_reimbursement": 100000,
+    "note": "standard/default plan terms, no co-pay, no deductible unless optional rider chosen"
+  }
+]

@@ -51,7 +51,7 @@ def _bm25_docs() -> list[Document]:
 def _matches_policy(meta: dict, policy_filter: str | None) -> bool:
     if not policy_filter:
         return True
-    needle = policy_filter.lower().strip()
+    needle = policy_filter.lower().strip().replace("_", " ").replace("-", " ")
     blob = " ".join(
         str(meta.get(key) or "")
         for key in ("policy_name", "insurer", "product", "source")
@@ -90,9 +90,9 @@ def format_docs(docs: list[Document]) -> str:
         if section:
             header += f" | {section}"
         header += "]"
-        parts.append(f"{header}\n{d.page_content}")
+        content = d.page_content[:600]
+        parts.append(f"{header}\n{content}")
     return "\n\n".join(parts)
-
 
 def docs_to_citations(docs: list[Document]) -> list[dict]:
     citations = []

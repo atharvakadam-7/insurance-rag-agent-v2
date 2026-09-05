@@ -46,5 +46,47 @@
     "question": "How do I file a reimbursement claim and what documents are required?",
     "expected_keywords": ["claim", "document", "reimburs"],
     "policy": null
+  },
+  {
+    "id": "star-copay-clause",
+    "question": "What is the exact co-payment percentage under Star Comprehensive for a senior citizen?",
+    "expected_keywords": ["10%", "co-payment", "61"],
+    "policy": "star_comprehensive"
+  },
+  {
+    "id": "star-ped-buyback",
+    "question": "Does Star Comprehensive offer a way to reduce the pre-existing disease waiting period?",
+    "expected_keywords": ["buy back", "buyback", "12 months", "reduce"],
+    "policy": "star_comprehensive"
+  },
+  {
+    "id": "star-cataract",
+    "question": "Is cataract surgery a specified disease with its own waiting period under Star Comprehensive?",
+    "expected_keywords": ["cataract", "24 month", "specified disease"],
+    "policy": "star_comprehensive"
+  },
+  {
+    "id": "hdfc-room-variants",
+    "question": "What room rent options does HDFC Optima Secure offer across its plan variants?",
+    "expected_keywords": ["Optima Lite", "Optima Select", "Single Private", "actuals"],
+    "policy": "hdfc_optima_secure"
+  },
+  {
+    "id": "hdfc-copay-tier",
+    "question": "Does HDFC Optima Secure apply a co-payment based on city tier?",
+    "expected_keywords": ["tier", "city", "co-payment", "metro"],
+    "policy": "hdfc_optima_secure"
+  },
+  {
+    "id": "hdfc-deductible",
+    "question": "Is there an optional aggregate deductible under HDFC Optima Secure?",
+    "expected_keywords": ["aggregate deductible", "optional"],
+    "policy": "hdfc_optima_secure"
+  },
+  {
+    "id": "cross-policy-isolation",
+    "question": "What is the co-payment clause under HDFC Optima Secure?",
+    "expected_keywords": ["HDFC", "tier"],
+    "policy": "hdfc_optima_secure"
   }
 ]
