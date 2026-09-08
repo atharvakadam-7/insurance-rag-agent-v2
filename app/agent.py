@@ -1,3 +1,4 @@
+from langchain_core.messages import AIMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
 from .config import require_groq_key
 from .llm import get_llm
@@ -17,8 +18,43 @@ Rules:
 7. Write your final answer as clean prose or a markdown table for the user. Never show raw tool call syntax, JSON blocks, or function names in your final answer — the user should only see a natural-language explanation and the final numbers/facts, not how you calculated them internally.
 """
 
+SEARCH_TOOL_NAME = "search_policy_docs"
+MAX_SEARCHES = 2
+
+STOP_SEARCH_INSTRUCTION = (
+    f"SYSTEM NOTICE: You have already called {SEARCH_TOOL_NAME} {MAX_SEARCHES} times — "
+    "the maximum allowed for this question. Do NOT call it again under any circumstances. "
+    "Using only the information already retrieved above, you must now either: "
+    "(a) call calculate_claim_reimbursement if this is a claim-amount question — per rule 4c, "
+    "treat any parameter you couldn't find as not applicable (coverage_percent=100, others at "
+    "default) rather than searching further for it; "
+    "(b) write your final answer now if it's a coverage/policy question you have enough "
+    "information for; or "
+    "(c) if the retrieved documents truly contain nothing relevant to this question, respond "
+    'with exactly: "The provided policy documents do not contain information about this."'
+)
+
+
+def _enforce_search_limit(state):
+    messages = state["messages"]
+    search_count = sum(
+        1
+        for msg in messages
+        if isinstance(msg, AIMessage) and msg.tool_calls
+        for tc in msg.tool_calls
+        if tc.get("name") == SEARCH_TOOL_NAME
+    )
+    if search_count >= MAX_SEARCHES:
+        return {"llm_input_messages": messages + [SystemMessage(content=STOP_SEARCH_INSTRUCTION)]}
+    return {"llm_input_messages": messages}
+
 
 def build_agent():
     require_groq_key()
     llm = get_llm()
-    return create_react_agent(llm, TOOLS, prompt=SYSTEM_PROMPT)
+    return create_react_agent(
+        llm,
+        TOOLS,
+        prompt=SYSTEM_PROMPT,
+        pre_model_hook=_enforce_search_limit,
+    )

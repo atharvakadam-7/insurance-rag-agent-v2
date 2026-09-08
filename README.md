@@ -12,13 +12,15 @@ Ask it what a co-payment clause says, or what you'd get back on a claim. It retr
 
 **Calculation.** The agent doesn't do arithmetic. It pulls the coverage percentage, co-pay, deductible, sub-limit, and room-rent cap from the policy text, then hands those numbers to a plain Python function that applies them in order: waiting-period check, room-rent proportionate deduction, deductible, sub-limit, coverage percentage, co-pay.
 
-**Search discipline.** The agent is capped at 2 retrieval searches per question, enforced in code rather than prompted. A `pre_model_hook` counts tool calls and forces the model to stop searching and answer once it hits the limit. Past that point it either calculates with what it has, answers with what it has, or states plainly that the documents don't cover the question.
+**Search discipline.** The agent is hard-capped at 2 retrieval searches per question, enforced inside the search tool itself, not just prompted. Past the limit, `search_policy_docs` returns a fixed refusal string instead of doing another real search, removing the payoff for continuing to search rather than relying on the model to voluntarily comply with an instruction. An earlier version of this enforcement lived in a `pre_model_hook` that injected a system-message warning before the limit-reaching call; that approach was advisory, and the model sometimes ignored it under pressure on harder questions. The current version is a hard gate at the tool level, using LangGraph's `InjectedState` to check the message history from inside the tool.
+
+**Monitoring.** Every query is traced end-to-end in LangSmith: each LLM call, each tool call with its arguments and return value, latency per step, and token usage. A flat JSON audit log (`audit.log`) is kept as a lightweight secondary record, but LangSmith is the primary way to inspect what happened on a specific query.
 
 **Auditing.** Every query logs the exact tool calls made, the arguments passed to the calculator, and the answer returned, as JSON in `audit.log`. Trace a wrong number back to what the model actually extracted, not just what it printed.
 
 ## Stack
 
-FastAPI, LangGraph, Groq (`qwen/qwen3.6-27b`), Chroma, `rank_bm25`, `flashrank`, `fastembed` for embeddings, `pymupdf4llm` and `rapidocr` for extraction. Deployed on Railway with the index built into the Docker image at build time.
+FastAPI, LangGraph, Groq (`qwen/qwen3.6-27b`), Chroma, `rank_bm25`, `flashrank`, `fastembed` for embeddings, `pymupdf4llm` and `rapidocr` for extraction, LangSmith for tracing and monitoring. Deployed on Railway with the index built into the Docker image at build time.
 
 ## Running it locally
 
@@ -31,9 +33,17 @@ pip install -r requirements.txt
 ```
 
 Add a `.env` file:
+```
 GROQ_API_KEY=your_key
 GROQ_MODEL=qwen/qwen3.6-27b
 
+# Optional — enables LangSmith tracing
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=your_langsmith_key
+LANGCHAIN_PROJECT=insurance-rag-agent-v2
+# Only needed if your LangSmith workspace is on a non-US region
+LANGCHAIN_ENDPOINT=https://apac.api.smith.langchain.com
+```
 
 Build the index and start the server:
 ```bash
@@ -67,20 +77,21 @@ Answer accuracy: `evals/run_answer_eval.py` runs the full agent (retrieval, clai
 ```bash
 python evals/run_answer_eval.py
 ```
-**4/4 passed** on the current sample. This eval calls the live Groq API and needs `GROQ_API_KEY`. Four claim scenarios is a small sample: solid signal, not exhaustive coverage. It's not wired into CI, since that would need a live API key stored as a secret, and free-tier rate limits would make CI runs flaky through no fault of the code.
+**4/4 passed**, confirmed on repeated runs including the previously flaky senior-co-payment case (see Changelog). This eval calls the live Groq API and needs `GROQ_API_KEY`. Four claim scenarios is a small sample: solid signal, not exhaustive coverage. It's not wired into CI, since that would need a live API key stored as a secret, and free-tier rate limits would make CI runs flaky through no fault of the code.
 
 ## What it gets right and what it doesn't
 
-Retrieval and calculation stay split apart on purpose, so the model can't miscalculate a reimbursement. It can still misread a clause and hand the calculator a wrong number with total confidence. The audit log exists so you can trace a wrong answer back to what the model actually extracted.
+Retrieval and calculation stay split apart on purpose, so the model can't miscalculate a reimbursement. It can still misread a clause and hand the calculator a wrong number with total confidence. LangSmith traces and the audit log exist so you can trace a wrong answer back to what the model actually extracted.
 
 The ingestion pipeline skips unchanged files but keeps no document versioning. Update a policy PDF mid-year and you get a fresh index with no record of what changed. Fine at a handful of PDFs, not built for hundreds.
 
-Groq's free tier enforces tight rate limits for a multi-step agent: per-minute caps on both input and output tokens, plus a separate daily token cap. A single question can take 3 or more calls (search, calculation, final answer). The client retries automatically on per-minute limits, so queries still complete, just slower under load. The daily cap is a hard stop until it resets. The 600-character cap on retrieved chunk content is a rate-limit accommodation, not a design ideal, and it's worth relaxing on a paid tier for richer context per answer.
+Groq's free tier enforces tight rate limits for a multi-step agent: per-minute caps on both input and output tokens, plus a separate daily token cap that appears to age out on a rolling window rather than resetting at a fixed time. A single question can take 3 or more calls (search, calculation, final answer). The client retries automatically on per-minute limits, so queries still complete, just slower under load. The daily cap is a hard stop until it recovers. The 600-character cap on retrieved chunk content is a rate-limit accommodation, not a design ideal, and it's worth relaxing on a paid tier for richer context per answer.
 
 ## Changelog
 
 - Fixed: removed the `gpt-oss-20b` fallback model. It doesn't support tool calling, and it silently corrupted agent responses (empty answers, recursion-limit loops) whenever the primary model hit a rate limit and LangChain's `with_fallbacks` swapped models mid-conversation.
 - Fixed: added `reasoning_effort="none"` to the primary LLM call. qwen's hidden chain-of-thought tokens were consuming the entire `max_tokens` budget, leaving nothing for the actual answer.
-- Fixed: the agent was ignoring its own "search at most twice" system-prompt rule. A `pre_model_hook` now counts `search_policy_docs` calls in code and forces the model to stop searching and answer once it hits the limit.
-- Changed: capped retrieved chunk content at 600 characters in `format_docs()` to stay under Groq free-tier input-token-per-minute limits during multi-step tool calls.
+- Fixed: the agent was ignoring its own "search at most twice" system-prompt rule, and a first attempt at fixing it (a `pre_model_hook` injecting a stop instruction) turned out to be advisory rather than enforced — the model sometimes searched again anyway on harder questions, still hitting the recursion limit. Root-caused via a LangSmith trace showing repeated search loops on the failing case. Real fix: `search_policy_docs` now enforces the limit itself via `InjectedState`, returning a refusal string instead of a real result past 2 calls. Confirmed fixed across repeated runs.
+- Changed: capped retrieved chunk content at 600 chars in `format_docs()` to stay under Groq free-tier input-token-per-minute limits during multi-step tool calls.
 - Added: a 21-test pytest suite (`tests/test_claim.py`, `tests/test_chunking.py`, plus the existing `tests/test_hybrid.py`) and a GitHub Actions workflow that runs them on every push.
+- Added: LangSmith tracing for full observability into agent runs, replacing the flat audit log as the primary way to debug a specific query. Setup required a non-default `LANGCHAIN_ENDPOINT` for accounts on a non-US LangSmith region — see `.env` example above.
