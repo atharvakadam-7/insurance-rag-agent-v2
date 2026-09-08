@@ -9,10 +9,11 @@ langchain-chroma
 langchain-text-splitters
 langgraph
 chromadb
-pypdf
 fastembed
 groq
 rank_bm25
 flashrank
 pymupdf4llm
 PyMuPDF
+rapidocr-onnxruntime
+langsmith

@@ -66,8 +66,7 @@ def hybrid_retrieve(
     candidate_k: int = CANDIDATE_K,
 ) -> list[Document]:
     vectorstore = get_vectorstore()
-    chroma_filter = None
-    dense = similarity_search(vectorstore, query, k=candidate_k, metadata_filter=chroma_filter)
+    dense = similarity_search(vectorstore, query, k=candidate_k)
     sparse = bm25_rank(query, _load_bm25().get("texts") or [], _bm25_docs(), k=candidate_k)
     fused = [doc for doc, _ in reciprocal_rank_fusion([dense, sparse])]
     if policy_filter:

@@ -86,7 +86,6 @@ def query(req: QueryRequest):
 
     agent = get_agent()
     tool_calls = []
-    retrieved_chunks = []
 
     try:
         # Log the incoming query
@@ -106,10 +105,6 @@ def query(req: QueryRequest):
                         "tool": tc.get("name", "unknown"),
                         "args": tc.get("args", {}),
                     })
-            # Extract retrieved chunks from search results
-            if hasattr(msg, "content") and isinstance(msg.content, str):
-                if "[Doc" in msg.content:  # format_docs() output
-                    retrieved_chunks.append(msg.content[:500])  # first 500 chars
 
         if isinstance(final_message.content, list):
             answer = "".join(
@@ -129,7 +124,6 @@ def query(req: QueryRequest):
             "event": "query_complete",
             "question": req.question,
             "tool_calls": tool_calls,
-            "retrieved_chunk_count": len(retrieved_chunks),
             "answer_preview": answer[:200],
             "status": "success",
         })

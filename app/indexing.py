@@ -112,6 +112,13 @@ def build_index(data_dir: str | None = None, force: bool = False) -> dict:
         return {"indexed": 0, "skipped": 0, "files": []}
 
     manifest = load_json(manifest_path(), {"embedding_model": None, "files": {}})
+    if manifest.get("embedding_model") and manifest.get("embedding_model") != EMBEDDING_MODEL:
+        logger.warning(
+            "Embedding model changed (%s -> %s) — wiping and rebuilding the "
+            "entire index. This is expected on a deliberate model change, "
+            "unexpected if EMBEDDING_MODEL wasn't meant to change.",
+            manifest.get("embedding_model"), EMBEDDING_MODEL,
+        )
     if force or manifest.get("embedding_model") != EMBEDDING_MODEL:
         if VECTOR_BACKEND != "pgvector" and os.path.exists(INDEX_DIR):
             shutil.rmtree(INDEX_DIR, ignore_errors=True)

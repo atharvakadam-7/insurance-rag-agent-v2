@@ -7,15 +7,12 @@ load_dotenv(override=True)
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 # Check Groq's console for current model names — they deprecate models
 # without much warning. This was correct at time of writing.
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-# Used by app/llm.py if the primary model call fails (rate limit, 404, etc).
-# Leave blank to disable fallback.
-GROQ_FALLBACK_MODEL = os.getenv("GROQ_FALLBACK_MODEL", "llama-3.1-8b-instant")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.6-27b")
 LLM_TIMEOUT_SECONDS = int(os.getenv("LLM_TIMEOUT_SECONDS", "30"))
-print(f"[startup] Using GROQ_MODEL={GROQ_MODEL} (fallback={GROQ_FALLBACK_MODEL or 'none'})")
+print(f"[startup] Using GROQ_MODEL={GROQ_MODEL}")
 
 # --- Embeddings / vector store ---
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIR", "chroma_db")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "policies")
 # "chroma" (default, local/free-tier friendly) or "pgvector" (needs DATABASE_URL)

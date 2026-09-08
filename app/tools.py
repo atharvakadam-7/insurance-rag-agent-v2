@@ -5,14 +5,36 @@ from .claim import calculate_claim
 from .retriever import format_docs, hybrid_retrieve
 
 
+from typing import Annotated
+from langchain_core.tools import tool
+from langgraph.prebuilt import InjectedState
+
+from .retriever import format_docs, hybrid_retrieve
+
+SEARCH_LIMIT = 2
+
 @tool
-def search_policy_docs(query: str, policy_filter: str = "") -> str:
-    """Search the insurance policy documents for information relevant to the
-    query. Use this whenever the user asks about coverage, exclusions,
-    waiting periods, or any specific clause in a policy. Always call this
-    before answering a coverage question — never answer from memory.
-    policy_filter: optional insurer or policy name to restrict results to
-    (e.g. "Star Health"), leave empty to search all policies."""
+def search_policy_docs(
+    query: str,
+    state: Annotated[dict, InjectedState],
+    policy_filter: str = "",
+) -> str:
+    """Search the insurance policy documents... (same docstring as before)"""
+    prior_searches = sum(
+        1
+        for msg in state["messages"]
+        if hasattr(msg, "tool_calls") and msg.tool_calls
+        for tc in msg.tool_calls
+        if tc.get("name") == "search_policy_docs"
+    )
+    if prior_searches >= SEARCH_LIMIT:
+        return (
+            "SEARCH LIMIT REACHED. No further searches will be performed. "
+            "You must now answer using only what you've already retrieved: "
+            "calculate a reimbursement with default values for anything not "
+            "found, answer the coverage question with what you have, or "
+            "state that the documents don't cover this."
+        )
     try:
         docs = hybrid_retrieve(query, policy_filter=policy_filter or None)
         if not docs:
@@ -20,7 +42,6 @@ def search_policy_docs(query: str, policy_filter: str = "") -> str:
         return format_docs(docs)
     except Exception as e:
         return f"Error retrieving documents: {str(e)}"
-
 
 @tool
 def calculate_claim_reimbursement(
@@ -81,19 +102,4 @@ def calculate_claim_reimbursement(
         return f"Error calculating claim: {str(e)}"
 
 
-@tool
-def compare_policy_clauses(clause_a: str, clause_b: str) -> str:
-    """Compare two policy clause texts (already retrieved via
-    search_policy_docs) on coverage, exclusions, and conditions. Pass the
-    actual clause text, not a policy name — this tool doesn't retrieve
-    anything itself."""
-    try:
-        return (
-            "Compare these two policy clauses on coverage, exclusions, "
-            f"and conditions:\n\nClause A:\n{clause_a}\n\nClause B:\n{clause_b}"
-        )
-    except Exception as e:
-        return f"Error comparing clauses: {str(e)}"
-
-
-TOOLS = [search_policy_docs, calculate_claim_reimbursement, compare_policy_clauses]
+TOOLS = [search_policy_docs, calculate_claim_reimbursement]
