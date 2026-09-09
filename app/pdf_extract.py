@@ -29,7 +29,6 @@ def _get_ocr():
         return _OCR
     try:
         from rapidocr_onnxruntime import RapidOCR
-
         _OCR = RapidOCR()
     except Exception as exc:
         logger.info("OCR unavailable (%s); scanned pages will be skipped", exc)

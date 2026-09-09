@@ -3,6 +3,7 @@ from langgraph.prebuilt import create_react_agent
 from .config import require_groq_key
 from .llm import get_llm
 from .tools import TOOLS
+from langgraph.checkpoint.sqlite import SqliteSaver
 
 SYSTEM_PROMPT = """You are an insurance policy assistant. You help users understand policy coverage, exclusions, and claim eligibility.
 
@@ -49,7 +50,7 @@ def _enforce_search_limit(state):
     return {"llm_input_messages": messages}
 
 
-def build_agent():
+def build_agent(checkpointer=None):
     require_groq_key()
     llm = get_llm()
     return create_react_agent(
@@ -57,4 +58,5 @@ def build_agent():
         TOOLS,
         prompt=SYSTEM_PROMPT,
         pre_model_hook=_enforce_search_limit,
+	checkpointer = checkpointer
     )

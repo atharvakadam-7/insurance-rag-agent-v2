@@ -8,6 +8,10 @@ import json
 import logging
 from datetime import datetime
 import os
+import uuid
+import sqlite3
+from langgraph.checkpoint.sqlite import SqliteSaver
+
 
 from .agent import build_agent
 from .pdf_extract import clean_text
@@ -16,6 +20,7 @@ app = FastAPI(title="Insurance Policy Agent")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 _agent = None
+_checkpointer_conn = None
 
 NOT_FOUND_ANSWER = "The provided policy documents do not contain information about this."
 
@@ -28,21 +33,22 @@ if not audit_logger.handlers:
     handler.setFormatter(formatter)
     audit_logger.addHandler(handler)
 
-
 def get_agent():
-    global _agent
+    global _agent, _checkpointer_conn
     if _agent is None:
-        _agent = build_agent()
+        _checkpointer_conn = sqlite3.connect("checkpoints.db", check_same_thread=False)
+        checkpointer = SqliteSaver(_checkpointer_conn)
+        _agent = build_agent(checkpointer=checkpointer)
     return _agent
-
 
 class QueryRequest(BaseModel):
     question: str
+    session_id: str | None = None
 
 
 class QueryResponse(BaseModel):
     answer: str
-
+    session_id: str
 
 def log_audit(event: dict):
     """Log structured audit event as JSON."""
@@ -83,18 +89,20 @@ def audit(n: int = 20):
 def query(req: QueryRequest):
     if not req.question.strip():
         raise HTTPException(status_code=400, detail="question cannot be empty")
-
+	
+    session_id = req.session_id or str(uuid.uuid4())
     agent = get_agent()
     tool_calls = []
 
     try:
         # Log the incoming query
-        log_audit({"event": "query_start", "question": req.question})
+        log_audit({"event": "query_start", "question": req.question,"session_id": session_id})
 
         result = agent.invoke(
             {"messages": [HumanMessage(content=req.question)]},
-            config={"recursion_limit": 25},
+            config={"recursion_limit": 25,  "configurable": {"thread_id": session_id}},
         )
+
         final_message = result["messages"][-1]
 
         # Extract tool calls from the agent's message history
@@ -128,7 +136,7 @@ def query(req: QueryRequest):
             "status": "success",
         })
 
-        return QueryResponse(answer=answer)
+        return QueryResponse(answer=answer, session_id=session_id)
 
     except GraphRecursionError:
         log_audit({
@@ -137,7 +145,7 @@ def query(req: QueryRequest):
             "tool_calls": tool_calls,
             "status": "recursion_limit_exceeded",
         })
-        return QueryResponse(answer=NOT_FOUND_ANSWER)
+        return QueryResponse(answer=NOT_FOUND_ANSWER,  session_id=session_id)
 
     except Exception as e:
         log_audit({
@@ -148,3 +156,4 @@ def query(req: QueryRequest):
             "status": "error",
         })
         raise HTTPException(status_code=500, detail=str(e))
+

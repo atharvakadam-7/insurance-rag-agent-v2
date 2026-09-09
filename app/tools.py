@@ -11,6 +11,7 @@ from langgraph.prebuilt import InjectedState
 
 from .retriever import format_docs, hybrid_retrieve
 
+
 SEARCH_LIMIT = 2
 
 @tool
@@ -87,6 +88,7 @@ def calculate_claim_reimbursement(
         except (ValueError, TypeError) as e:
             return f"Error: invalid numeric argument. {str(e)} Ensure all amounts are numbers."
 
+        
         result = calculate_claim(
             claim_amount=claim_amount,
             coverage_percent=coverage_percent,
