@@ -8,6 +8,7 @@ langchain-groq
 langchain-chroma
 langchain-text-splitters
 langgraph
+langgraph-checkpoint-sqlite
 chromadb
 fastembed
 groq
