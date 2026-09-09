@@ -24,15 +24,17 @@ MAX_SEARCHES = 2
 
 STOP_SEARCH_INSTRUCTION = (
     f"SYSTEM NOTICE: You have already called {SEARCH_TOOL_NAME} {MAX_SEARCHES} times — "
-    "the maximum allowed for this question. Do NOT call it again under any circumstances. "
-    "Using only the information already retrieved above, you must now either: "
-    "(a) call calculate_claim_reimbursement if this is a claim-amount question — per rule 4c, "
-    "treat any parameter you couldn't find as not applicable (coverage_percent=100, others at "
-    "default) rather than searching further for it; "
-    "(b) write your final answer now if it's a coverage/policy question you have enough "
-    "information for; or "
-    "(c) if the retrieved documents truly contain nothing relevant to this question, respond "
-    'with exactly: "The provided policy documents do not contain information about this."'
+    "the maximum allowed for this question. Do NOT call it again under any circumstances.\n\n"
+    "Using only the information already retrieved above, determine which of these applies:\n\n"
+    "(a) If this question involves a claim amount or reimbursement figure, you MUST now call "
+    "calculate_claim_reimbursement as your next action — do not write out any calculation or "
+    "reimbursement figure in prose yourself under any circumstances. Per rule 4c, treat any "
+    "parameter you couldn't find as not applicable (coverage_percent=100, others at default) "
+    "rather than searching further for it. Calling this tool is mandatory here, not optional.\n\n"
+    "(b) If it's a coverage/policy question with no claim amount involved, write your final "
+    "answer now using what you have.\n\n"
+    "(c) Only if the retrieved documents truly contain nothing relevant to this question at all, "
+    'respond with exactly: "The provided policy documents do not contain information about this."'
 )
 
 
