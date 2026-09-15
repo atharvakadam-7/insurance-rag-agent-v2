@@ -7,7 +7,7 @@ load_dotenv(override=True)
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 # Check Groq's console for current model names — they deprecate models
 # without much warning. This was correct at time of writing.
-GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.6-27b")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
 LLM_TIMEOUT_SECONDS = int(os.getenv("LLM_TIMEOUT_SECONDS", "30"))
 print(f"[startup] Using GROQ_MODEL={GROQ_MODEL}")
 

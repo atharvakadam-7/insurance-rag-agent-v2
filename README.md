@@ -20,7 +20,7 @@ Ask it what a co-payment clause says, or what you'd get back on a claim. It retr
 
 ## Stack
 
-FastAPI, LangGraph, Groq (`qwen/qwen3.6-27b`), Chroma, `rank_bm25`, `flashrank`, `fastembed` for embeddings, `pymupdf4llm` and `rapidocr` for extraction, LangSmith for tracing and monitoring. Deployed on Railway with the index built into the Docker image at build time.
+FastAPI, LangGraph, Groq (`qwen/qwen3.8-27b`), Chroma, `rank_bm25`, `flashrank`, `fastembed` for embeddings, `pymupdf4llm` and `rapidocr` for extraction, LangSmith for tracing and monitoring. Deployed on Railway with the index built into the Docker image at build time.
 
 ## Running it locally
 
@@ -35,7 +35,7 @@ pip install -r requirements.txt
 Add a `.env` file:
 ```
 GROQ_API_KEY=your_key
-GROQ_MODEL=qwen/qwen3.6-27b
+GROQ_MODEL=qwen/qwen3.8-27b
 
 # Optional — enables LangSmith tracing
 LANGCHAIN_TRACING_V2=true
