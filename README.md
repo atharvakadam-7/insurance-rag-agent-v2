@@ -7,7 +7,7 @@ https://github.com/user-attachments/assets/9cc82a5c-a3e1-48c3-8c41-aebb171ef565
 
 
 
-An agent that answers questions about insurance policy PDFs and calculates claim reimbursements. Live at https://insurance-rag-agent-v2-production.up.railway.app
+An agent that answers questions about insurance policy PDFs and calculates claim reimbursements.
 
 Ask it what a co-payment clause says, or what you'd get back on a claim. It retrieves the relevant clause, cites the page it came from, and runs the math in code instead of guessing the arithmetic.
 
